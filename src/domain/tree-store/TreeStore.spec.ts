@@ -171,6 +171,32 @@ describe('TreeStore mutation methods', () => {
     expect(store.getAllParents(6)).toEqual([movedItem, items[0]])
   })
 
+  it('inserts moved item before later siblings according to source order', () => {
+    const store = new TreeStore(items)
+    const movedItem: TestItem = { ...items[2], parent: '91064cee' }
+
+    store.updateItem(movedItem)
+
+    expect(store.getChildren('91064cee')).toEqual([
+      movedItem,
+      items[3],
+      items[4],
+      items[5],
+    ])
+  })
+
+  it('removes added leaf and clears empty children bucket', () => {
+    const store = new TreeStore(items)
+    const newItem: TestItem = { id: 9, parent: 3, label: 'Айтем 9' }
+
+    store.addItem(newItem)
+    store.removeItem(9)
+
+    expect(store.getItem(9)).toBeUndefined()
+    expect(store.getChildren(3)).toEqual([])
+    expect(store.getAll()).toEqual(items)
+  })
+
   it('throws when adding duplicate id', () => {
     const store = new TreeStore(items)
 
@@ -182,5 +208,116 @@ describe('TreeStore mutation methods', () => {
     const missingItem: TestItem = { id: 'missing-id', parent: null, label: 'Missing' }
 
     expect(() => store.updateItem(missingItem)).toThrow('does not exist')
+  })
+})
+
+describe('TreeStore defensive branches', () => {
+  it('skips invalid entries while collecting descendants', () => {
+    const store = new TreeStore(items)
+    const internals = store as unknown as {
+      childrenByParentId: Map<TestItem['id'] | null, Array<TestItem | undefined>>
+    }
+    const childrenOfRoot = internals.childrenByParentId.get(1)
+
+    expect(childrenOfRoot).toBeDefined()
+
+    childrenOfRoot?.splice(1, 0, undefined)
+
+    expect(store.getAllChildren(1)).toEqual([
+      items[1],
+      items[3],
+      items[6],
+      items[7],
+      items[4],
+      items[5],
+      items[2],
+    ])
+  })
+
+  it('skips duplicate and invalid entries while removing a subtree', () => {
+    const store = new TreeStore(items)
+    const internals = store as unknown as {
+      childrenByParentId: Map<TestItem['id'] | null, Array<TestItem | undefined>>
+    }
+    const childrenOfBranch = internals.childrenByParentId.get('91064cee')
+
+    expect(childrenOfBranch).toBeDefined()
+
+    childrenOfBranch?.push(items[3], undefined)
+
+    store.removeItem('91064cee')
+
+    expect(store.getItem('91064cee')).toBeUndefined()
+    expect(store.getItem(4)).toBeUndefined()
+    expect(store.getChildren(1)).toEqual([items[2]])
+  })
+
+  it('throws when item index is missing for an existing item', () => {
+    const store = new TreeStore(items)
+    const internals = store as unknown as {
+      itemIndexById: Map<TestItem['id'], number>
+    }
+
+    internals.itemIndexById.delete(4)
+
+    expect(() => store.updateItem({ ...items[3], label: 'Broken index' })).toThrow(
+      'is corrupted',
+    )
+  })
+
+  it('recreates sibling bucket when it is unexpectedly missing', () => {
+    const store = new TreeStore(items)
+    const internals = store as unknown as {
+      childrenByParentId: Map<TestItem['id'] | null, TestItem[]>
+    }
+    const updatedItem: TestItem = { ...items[3], label: 'Айтем 4 (updated)' }
+
+    internals.childrenByParentId.delete('91064cee')
+
+    store.updateItem(updatedItem)
+
+    expect(store.getChildren('91064cee')).toEqual([updatedItem])
+  })
+
+  it('reinserts item when it is unexpectedly missing from siblings bucket', () => {
+    const store = new TreeStore(items)
+    const internals = store as unknown as {
+      childrenByParentId: Map<TestItem['id'] | null, TestItem[]>
+    }
+    const updatedItem: TestItem = { ...items[3], label: 'Айтем 4 (reinserted)' }
+
+    internals.childrenByParentId.set('91064cee', [items[4], items[5]])
+
+    store.updateItem(updatedItem)
+
+    expect(store.getChildren('91064cee')).toEqual([updatedItem, items[4], items[5]])
+  })
+
+  it('keeps removeItem stable when parent bucket is missing', () => {
+    const store = new TreeStore(items)
+    const internals = store as unknown as {
+      childrenByParentId: Map<TestItem['id'] | null, TestItem[]>
+    }
+
+    internals.childrenByParentId.delete(1)
+
+    store.removeItem('91064cee')
+
+    expect(store.getItem('91064cee')).toBeUndefined()
+    expect(store.getAll()).toEqual([items[0], items[2]])
+  })
+
+  it('keeps removeItem stable when parent bucket does not contain the child', () => {
+    const store = new TreeStore(items)
+    const internals = store as unknown as {
+      childrenByParentId: Map<TestItem['id'] | null, TestItem[]>
+    }
+
+    internals.childrenByParentId.set(1, [items[2]])
+
+    store.removeItem('91064cee')
+
+    expect(store.getItem('91064cee')).toBeUndefined()
+    expect(store.getAll()).toEqual([items[0], items[2]])
   })
 })

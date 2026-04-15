@@ -148,8 +148,7 @@ const columnDefs: ColDef<TreeGridRow>[] = [
 
 .tree-grid__table {
   min-width: 980px;
-  --ag-font-family: "Manrope", "Avenir Next", "Segoe UI", "Helvetica Neue", Arial,
-    sans-serif;
+  --ag-font-family: 'Manrope', 'Avenir Next', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
   --ag-font-size: 18px;
   --ag-foreground-color: #474747;
   --ag-background-color: #ffffff;
