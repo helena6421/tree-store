@@ -107,3 +107,80 @@ describe('TreeStore read methods', () => {
     expect(store.getAllParents('unknown')).toEqual([])
   })
 })
+
+describe('TreeStore mutation methods', () => {
+  it('adds item and updates indexes', () => {
+    const store = new TreeStore(items)
+    const newItem: TestItem = { id: 9, parent: 3, label: 'Айтем 9' }
+
+    store.addItem(newItem)
+
+    expect(store.getItem(9)).toEqual(newItem)
+    expect(store.getChildren(3)).toEqual([newItem])
+    expect(store.getAllChildren(1)).toEqual([
+      items[1],
+      items[3],
+      items[6],
+      items[7],
+      items[4],
+      items[5],
+      items[2],
+      newItem,
+    ])
+  })
+
+  it('removes item with the entire subtree', () => {
+    const store = new TreeStore(items)
+
+    store.removeItem('91064cee')
+
+    expect(store.getItem('91064cee')).toBeUndefined()
+    expect(store.getItem(4)).toBeUndefined()
+    expect(store.getItem(7)).toBeUndefined()
+    expect(store.getChildren(1)).toEqual([items[2]])
+    expect(store.getAll()).toEqual([items[0], items[2]])
+  })
+
+  it('does nothing when removing unknown item', () => {
+    const store = new TreeStore(items)
+
+    store.removeItem('missing-id')
+
+    expect(store.getAll()).toEqual(items)
+  })
+
+  it('updates item payload without rebuilding unrelated branches', () => {
+    const store = new TreeStore(items)
+    const updatedItem: TestItem = { ...items[3], label: 'Обновлённый айтем 4' }
+
+    store.updateItem(updatedItem)
+
+    expect(store.getItem(4)).toEqual(updatedItem)
+    expect(store.getChildren('91064cee')).toEqual([updatedItem, items[4], items[5]])
+    expect(store.getAllParents(7)).toEqual([items[6], updatedItem, items[1], items[0]])
+  })
+
+  it('updates parent and keeps source order inside the new branch', () => {
+    const store = new TreeStore(items)
+    const movedItem: TestItem = { ...items[5], parent: 1, label: items[5].label }
+
+    store.updateItem(movedItem)
+
+    expect(store.getChildren('91064cee')).toEqual([items[3], items[4]])
+    expect(store.getChildren(1)).toEqual([items[1], items[2], movedItem])
+    expect(store.getAllParents(6)).toEqual([movedItem, items[0]])
+  })
+
+  it('throws when adding duplicate id', () => {
+    const store = new TreeStore(items)
+
+    expect(() => store.addItem(items[0])).toThrow('already exists')
+  })
+
+  it('throws when updating missing item', () => {
+    const store = new TreeStore(items)
+    const missingItem: TestItem = { id: 'missing-id', parent: null, label: 'Missing' }
+
+    expect(() => store.updateItem(missingItem)).toThrow('does not exist')
+  })
+})
