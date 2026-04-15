@@ -177,12 +177,7 @@ describe('TreeStore mutation methods', () => {
 
     store.updateItem(movedItem)
 
-    expect(store.getChildren('91064cee')).toEqual([
-      movedItem,
-      items[3],
-      items[4],
-      items[5],
-    ])
+    expect(store.getChildren('91064cee')).toEqual([movedItem, items[3], items[4], items[5]])
   })
 
   it('removes added leaf and clears empty children bucket', () => {
@@ -260,9 +255,7 @@ describe('TreeStore defensive branches', () => {
 
     internals.itemIndexById.delete(4)
 
-    expect(() => store.updateItem({ ...items[3], label: 'Broken index' })).toThrow(
-      'is corrupted',
-    )
+    expect(() => store.updateItem({ ...items[3], label: 'Broken index' })).toThrow('is corrupted')
   })
 
   it('recreates sibling bucket when it is unexpectedly missing', () => {

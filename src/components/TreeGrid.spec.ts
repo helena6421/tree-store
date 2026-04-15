@@ -113,11 +113,9 @@ describe('TreeGrid', () => {
     expect(categoryColumn.valueGetter?.({})).toBe('')
     expect(categoryColumn.cellRendererParams?.innerRenderer({ data: rowData[0] })).toBe('Группа')
     expect(categoryColumn.cellRendererParams?.innerRenderer({})).toBe('')
-    expect(categoryColumn.cellClass?.({ data: rowData[0] })).toContain(
-      'tree-grid__cell--group',
-    )
+    expect(categoryColumn.cellClass?.({ data: rowData[0] })).toContain('tree-grid__cell--group')
     expect(categoryColumn.cellClass?.({ data: rowData[2] })).toBe(
-      'tree-grid__cell tree-grid__cell--category',
+      'tree-grid__cell tree-grid__cell--category'
     )
   })
 
