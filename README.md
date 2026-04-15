@@ -1,5 +1,168 @@
-# Vue 3 + TypeScript + Vite
+# Tree Store
 
-This template should help get you started developing with Vue 3 and TypeScript in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+Тестовое задание на реализацию `TreeStore` для работы с плоским массивом элементов,
+который интерпретируется как дерево через поля `id` и `parent`, а также на
+отрисовку дерева в табличном виде с использованием `AgGrid` и `Vue 3`.
 
-Learn more about the recommended Project Setup and IDE Support in the [Vue Docs TypeScript Guide](https://vuejs.org/guide/typescript/overview.html#project-setup).
+## Постановка задачи
+
+Есть массив объектов, которые имеют поля id и parent, через которые их можно связать в
+дерево и некоторые произвольные поля. id может быть как числом, так и строкой.
+Порядок id не гарантируется, они не должны иметь отношения к порядковым номерам,
+изначально отсутствует какой либо принцип сортировки.
+
+Нужно написать класс TreeStore, который принимает в конструктор массив этих объектов
+и реализует методы.
+
+Для визуализации и взаимодействия с этим классом нужно создать vue-компонент,
+выводящий элементы хранилища в таблицу на основе библиотеки AgGrid, которая
+предоставляет уже готовый компонент ag-grid-vue для использования с
+фреймворком Vue.
+
+Айтемы хранилища должны быть представлены в виде строк таблицы. Если у айтема
+есть дочерние элементы, то такая строка должна быть разворачиваемой. По наличию
+дочерних элементов должно происходить определение категории строки(столбец
+Категория) - либо Группа, либо Элемент.
+В колонке № п\п должен отображаться порядковый номер строки в таблице.
+
+## Что реализовано
+
+Проект состоит из двух частей:
+
+1. `TreeStore` — класс для эффективной работы с деревом
+2. UI на `Vue 3 + AgGrid`, отображающий дерево в табличном виде
+
+## Стек
+
+- `Vue 3`
+- `TypeScript`
+- `Vite`
+- `Vitest`
+- `AgGrid Community + Enterprise`
+- `Prettier`
+
+## TreeStore
+
+### Поддерживаемые операции
+
+- `getAll()` — возвращает массив элементов
+- `getItem(id)` — возвращает элемент по `id`
+- `getChildren(id)` — возвращает прямых детей
+- `getAllChildren(id)` — возвращает всех потомков на любой глубине
+- `getAllParents(id)` — возвращает цепочку от текущего элемента к корню
+- `addItem(item)` — добавляет новый элемент
+- `removeItem(id)` — удаляет элемент и всё его поддерево
+- `updateItem(item)` — обновляет существующий элемент
+
+### Внутренние структуры данных
+
+Для производительности `TreeStore` строит индексы один раз в конструкторе и затем
+поддерживает их при мутациях:
+
+- `itemById: Map<TreeItemId, T>` — быстрый доступ к элементу по `id`
+- `itemIndexById: Map<TreeItemId, number>` — индекс элемента в массиве `items`
+- `childrenByParentId: Map<TreeItemId | null, T[]>` — быстрый доступ к списку детей
+- `parentById: Map<TreeItemId, TreeItemId | null>` — быстрый подъём вверх по дереву
+
+### Сложность операций
+
+- `getItem(id)` — `O(1)`
+- `getChildren(id)` — `O(1)`
+- `getAllParents(id)` — `O(h)`, где `h` — высота дерева
+- `getAllChildren(id)` — `O(k)`, где `k` — размер поддерева
+- `addItem(item)` — `O(1)`
+- `updateItem(item)` — `O(1)` при обновлении без смены ветки, до `O(s)` при
+  перестановке среди siblings
+- `removeItem(id)` — `O(k + n)`, где `k` — размер удаляемого поддерева, `n` —
+  размер массива для переиндексации
+
+## UI
+
+Интерфейс реализован в компоненте [src/components/TreeGrid.vue](./src/components/TreeGrid.vue)
+на основе `AgGridVue`.
+
+### Что делает UI
+
+- отображает дерево в табличном виде
+- использует `treeData` режим `AgGrid`
+- показывает тип строки:
+  - `Группа` — если у элемента есть дети
+  - `Элемент` — если детей нет
+- поддерживает раскрытие/сворачивание дерева
+- отображает колонку `№ п\п`
+- выводит `Наименование` на основе поля `label`
+- по умолчанию показывает дерево в полностью развёрнутом виде
+
+## Тестирование
+
+Используется `Vitest`.
+
+Покрыты:
+
+- read-методы `TreeStore`
+- mutation-методы `TreeStore`
+- edge cases и defensive branches `TreeStore`
+- подготовка данных и grid-конфигурации в `TreeGrid`
+- базовый рендер `App`
+
+### Основные test files
+
+- [src/domain/tree-store/TreeStore.spec.ts](./src/domain/tree-store/TreeStore.spec.ts)
+- [src/components/TreeGrid.spec.ts](./src/components/TreeGrid.spec.ts)
+- [src/App.spec.ts](./src/App.spec.ts)
+
+## Скрипты
+
+Установка зависимостей:
+
+```bash
+npm install
+```
+
+Локальная разработка:
+
+```bash
+npm run dev
+```
+
+Проверка типов:
+
+```bash
+npm run typecheck
+```
+
+Запуск тестов:
+
+```bash
+npm run test:run
+```
+
+Запуск тестов в watch-режиме:
+
+```bash
+npm run test
+```
+
+Отчёт по покрытию:
+
+```bash
+npm run test:coverage
+```
+
+Сборка production-версии:
+
+```bash
+npm run build
+```
+
+Просмотр production-сборки:
+
+```bash
+npm run preview
+```
+
+Форматирование:
+
+```bash
+npm run format
+```
