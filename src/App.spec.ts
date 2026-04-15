@@ -1,10 +1,10 @@
-import { mount } from '@vue/test-utils'
+import { shallowMount } from '@vue/test-utils'
 import App from './App.vue'
 
 describe('App', () => {
   it('renders application title', () => {
-    const wrapper = mount(App)
+    const wrapper = shallowMount(App)
 
-    expect(wrapper.text()).toContain('TreeStore Test Task')
+    expect(wrapper.text()).toContain('Дерево элементов')
   })
 })
